@@ -8,7 +8,7 @@ from agent.config import Settings
 from agent.core.io import read_mission_input, write_json
 from agent.core.report import build_report
 from agent.core.safety import SafetyPolicy
-from agent.llm.mock import MockLLMClient
+from agent.llm.router import LLMRouter
 from agent.models.schemas import RunArtifacts
 from agent.tools.mock_actions import MockActionPlanner
 
@@ -20,8 +20,6 @@ class AgentRunner:
         self.settings = settings
 
     def run(self) -> Path:
-        if self.settings.llm_provider != "mock":
-            raise ValueError("Only LLM_PROVIDER=mock is supported in this base project.")
         if not self.settings.dry_run:
             raise ValueError("This base project only supports DRY_RUN=true.")
 
@@ -32,8 +30,8 @@ class AgentRunner:
         logger.info("Reading mission input from %s", self.settings.input_path)
         mission_input = read_mission_input(self.settings.input_path)
 
-        logger.info("Generating mock decisions")
-        decisions = MockLLMClient().decide(mission_input)
+        logger.info("Generating decisions with LLM router")
+        decisions = LLMRouter(self.settings).decide(mission_input)
 
         logger.info("Generating mock actions")
         planned_actions = MockActionPlanner().plan(decisions)

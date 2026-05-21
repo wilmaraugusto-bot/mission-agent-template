@@ -85,11 +85,24 @@ def main() -> int:
         failures.append("LLM_PROVIDER=mock not found in .env")
     if "LLM_PROVIDER=mock" not in env_example_content:
         failures.append("LLM_PROVIDER=mock not found in .env.example")
+    if "LLM_FALLBACK_PROVIDER=mock" not in env_content:
+        failures.append("LLM_FALLBACK_PROVIDER=mock not found in .env")
+    if "LLM_FALLBACK_PROVIDER=mock" not in env_example_content:
+        failures.append("LLM_FALLBACK_PROVIDER=mock not found in .env.example")
 
     if "docker compose up --build" not in readme_content:
         failures.append("README.md must include docker compose up --build")
     if "caso de teste" not in readme_content:
         failures.append("README.md must include an explicit test case section")
+    if "mock" not in readme_content or "gemini" not in readme_content or "openai" not in readme_content:
+        failures.append("README.md must explain mock default and optional Gemini/OpenAI providers")
+
+    env_values = parse_env(env_content)
+    env_example_values = parse_env(env_example_content)
+    if env_values.get("LLM_PROVIDER", "mock") != "mock":
+        failures.append(".env must keep LLM_PROVIDER=mock as the default")
+    if env_example_values.get("LLM_PROVIDER", "mock") != "mock":
+        failures.append(".env.example must keep LLM_PROVIDER=mock as the documented default")
 
     if not has_required_run_artifacts(ROOT / "runs"):
         failures.append("No run in runs/ contains decisions.json, actions.json, and report.md")

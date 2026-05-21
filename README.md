@@ -10,7 +10,10 @@ Base minima em Python para um agente autonomo de IA em modo `dry-run`, adaptavel
 - Aplica uma politica simples de seguranca.
 - Salva os artefatos em `runs/<timestamp>/`.
 
-O provedor padrao de LLM e `mock`. Gemini/OpenAI ainda nao foram implementados.
+O provedor padrao de LLM e `mock`, e esse modo deve funcionar sem internet e sem
+chave de API. Gemini e OpenAI sao opcionais e ficam atras de variaveis de ambiente;
+se a chave estiver vazia ou o provider falhar, o agente registra um warning e volta
+automaticamente para `mock`.
 
 ## Caso de teste obrigatorio
 
@@ -43,5 +46,24 @@ Veja `.env.example`. A configuracao padrao usa:
 
 ```text
 LLM_PROVIDER=mock
+LLM_FALLBACK_PROVIDER=mock
+GEMINI_API_KEY=
+OPENAI_API_KEY=
 DRY_RUN=true
 ```
+
+Providers opcionais:
+
+```text
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=
+```
+
+```text
+LLM_PROVIDER=openai
+OPENAI_API_KEY=
+```
+
+Nesta versao, Gemini/OpenAI sao stubs seguros: nao adicionam dependencia
+obrigatoria de SDK externo nem fazem chamadas reais complexas. O fluxo principal
+continua validando as decisoes pelos modelos Pydantic antes de gerar acoes.
