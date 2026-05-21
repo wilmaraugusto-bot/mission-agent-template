@@ -1,0 +1,20 @@
+[
+  {
+    "id": "action-001",
+    "decision_id": "decision-001",
+    "kind": "mock_review_step",
+    "description": "Would review and document the next safe step for task-001.",
+    "dry_run": true,
+    "safety_status": "allowed",
+    "safety_reason": "Mock dry-run action allowed by policy."
+  },
+  {
+    "id": "action-002",
+    "decision_id": "decision-002",
+    "kind": "mock_review_step",
+    "description": "Would review and document the next safe step for task-002.",
+    "dry_run": true,
+    "safety_status": "allowed",
+    "safety_reason": "Mock dry-run action allowed by policy."
+  }
+]

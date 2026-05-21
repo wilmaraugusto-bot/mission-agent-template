@@ -1,0 +1,24 @@
+{
+  "theme": "generic-autonomous-ai-agent",
+  "goal": "Produce a safe dry-run plan for a challenge mission.",
+  "context": {
+    "challenge": "Missao IA + Open Challenge Dev",
+    "constraints": [
+      "dry-run only",
+      "no external side effects",
+      "mock provider"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "task-001",
+      "description": "Analyze the mission input and identify a safe next step.",
+      "priority": "high"
+    },
+    {
+      "id": "task-002",
+      "description": "Prepare mock actions that would be reviewed before execution.",
+      "priority": "medium"
+    }
+  ]
+}

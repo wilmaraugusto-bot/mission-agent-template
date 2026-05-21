@@ -1,0 +1,16 @@
+[
+  {
+    "id": "decision-001",
+    "task_id": "task-001",
+    "summary": "Mock decision for task-001",
+    "rationale": "Dry-run mock decision based on the provided mission input and safety-first execution constraints.",
+    "confidence": 0.75
+  },
+  {
+    "id": "decision-002",
+    "task_id": "task-002",
+    "summary": "Mock decision for task-002",
+    "rationale": "Dry-run mock decision based on the provided mission input and safety-first execution constraints.",
+    "confidence": 0.75
+  }
+]
