@@ -206,6 +206,9 @@ gerar as decisoes. Se `GEMINI_API_KEY` estiver vazia, se o modelo configurado em
 fluxo usa `mock` automaticamente. Esse fallback e esperado e seguro. Nao coloque
 chaves reais no repositorio.
 
+As respostas do Gemini sao normalizadas defensivamente e validadas pelos schemas
+Pydantic antes de qualquer acao em `dry-run`.
+
 ```text
 LLM_PROVIDER=openai
 OPENAI_API_KEY=

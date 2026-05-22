@@ -9,7 +9,7 @@ from agent.config import Settings, load_settings
 from agent.llm.base import LLMProviderError
 from agent.llm.gemini_provider import GeminiLLMProvider
 from agent.llm.router import LLMRouter
-from agent.models.schemas import MissionInput, MissionTask
+from agent.models.schemas import Decision, MissionInput, MissionTask
 
 
 def _mission_input() -> MissionInput:
@@ -217,3 +217,118 @@ def test_gemini_invalid_schema_error_is_diagnostic(monkeypatch):
         assert "schema is invalid" in str(exc)
     else:
         raise AssertionError("Expected LLMProviderError")
+
+
+def test_gemini_normalizes_boolean_personal_data_to_list():
+    provider = GeminiLLMProvider(api_key="test-key")
+
+    [decision] = provider._normalize_decisions(
+        [
+            {
+                "id": "decision-001",
+                "task_id": "task-001",
+                "summary": "Summary",
+                "rationale": "Rationale",
+                "confidence": 0.7,
+                "personal_data_detected": True,
+                "regulatory_risk": "medio",
+            }
+        ]
+    )
+
+    assert decision["personal_data_detected"] == ["dados_pessoais_detectados"]
+
+
+def test_gemini_normalizes_string_masked_data_to_dict():
+    provider = GeminiLLMProvider(api_key="test-key")
+
+    [decision] = provider._normalize_decisions(
+        [
+            {
+                "id": "decision-001",
+                "task_id": "task-001",
+                "summary": "Summary",
+                "rationale": "Rationale",
+                "confidence": 0.7,
+                "masked_data": "[NOME_MASCARADO]",
+                "regulatory_risk": "medio",
+            }
+        ]
+    )
+
+    assert decision["masked_data"] == {"valor_mascarado": "[NOME_MASCARADO]"}
+
+
+def test_gemini_normalizes_string_missing_contract_clause_to_list():
+    provider = GeminiLLMProvider(api_key="test-key")
+
+    [decision] = provider._normalize_decisions(
+        [
+            {
+                "id": "decision-001",
+                "task_id": "task-001",
+                "summary": "Summary",
+                "rationale": "Rationale",
+                "confidence": 0.7,
+                "missing_contract_clauses": "confidencialidade",
+                "regulatory_risk": "medio",
+            }
+        ]
+    )
+
+    assert decision["missing_contract_clauses"] == ["confidencialidade"]
+
+
+def test_gemini_normalizes_invalid_risk_to_high_and_requires_review():
+    provider = GeminiLLMProvider(api_key="test-key")
+
+    [decision] = provider._normalize_decisions(
+        [
+            {
+                "id": "decision-001",
+                "task_id": "task-001",
+                "summary": "Summary",
+                "rationale": "Rationale",
+                "confidence": 2,
+                "regulatory_risk": "unknown",
+                "requires_human_review": False,
+            }
+        ]
+    )
+
+    assert decision["confidence"] == 1.0
+    assert decision["regulatory_risk"] == "alto"
+    assert decision["requires_human_review"] is True
+    assert "normalizado para alto" in decision["review_reasons"][0]
+
+
+def test_gemini_keeps_correct_response_compatible_with_pydantic():
+    provider = GeminiLLMProvider(api_key="test-key")
+
+    [normalized] = provider._normalize_decisions(
+        [
+            {
+                "id": "decision-001",
+                "task_id": "task-001",
+                "summary": "Summary",
+                "rationale": "Rationale",
+                "confidence": 0.7,
+                "item_type": "minuta_contratual_simulada",
+                "personal_data_detected": ["nome", "cpf"],
+                "sensitive_data_detected": ["saude"],
+                "masked_data": {"nome": "[NOME_MASCARADO]"},
+                "regulatory_risk": "alto",
+                "missing_documents": ["anexo_lgpd"],
+                "missing_contract_clauses": ["retencao_descarte"],
+                "requires_human_review": True,
+                "review_reasons": ["risco alto"],
+                "recommended_actions": ["route_to_human_review"],
+            }
+        ]
+    )
+
+    decision = Decision.model_validate(normalized)
+
+    assert decision.personal_data_detected == ["nome", "cpf"]
+    assert decision.masked_data == {"nome": "[NOME_MASCARADO]"}
+    assert decision.regulatory_risk == "alto"
