@@ -74,12 +74,19 @@ Cada execucao gera:
 runs/<timestamp>/decisions.json
 runs/<timestamp>/actions.json
 runs/<timestamp>/report.md
+runs/<timestamp>/audit_log.jsonl
 ```
 
 O relatorio inclui resumo executivo, itens analisados, dados detectados por
 categoria, dados mascarados, risco regulatorio, pendencias, justificativas,
 acoes em `dry-run`, revisao humana, trilha de auditoria, limites e melhorias
 futuras.
+
+O `audit_log.jsonl` registra eventos estruturados da execucao em JSON Lines,
+incluindo entrada carregada, provider selecionado, decisoes geradas, acoes
+geradas, politica aplicada e artefatos escritos. Ele armazena apenas metadados
+seguros, como contagens, caminhos e status, sem chaves de API, dados pessoais
+completos ou texto integral de documentos.
 
 ## Human-in-the-loop
 
@@ -153,7 +160,8 @@ Os principais arquivos gerados sao:
 
 - `decisions.json`: decisoes estruturadas do agente;
 - `actions.json`: acoes simuladas em `dry-run`;
-- `report.md`: relatorio legivel para revisao humana.
+- `report.md`: relatorio legivel para revisao humana;
+- `audit_log.jsonl`: log estruturado de auditoria com eventos e metadados seguros.
 
 O avaliador pode abrir o `report.md` mais recente para ver a analise. Exemplos
 incluidos na entrada simulada:
@@ -185,6 +193,7 @@ Ao final, devem existir arquivos como:
 runs/<timestamp>/decisions.json
 runs/<timestamp>/actions.json
 runs/<timestamp>/report.md
+runs/<timestamp>/audit_log.jsonl
 ```
 
 O relatorio deve mostrar que o agente coletou dados, analisou contexto, tomou

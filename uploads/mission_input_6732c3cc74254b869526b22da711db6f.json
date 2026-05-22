@@ -1,0 +1,45 @@
+{
+  "theme": "RegulaGuard Agent Web - triagem experimental de documento simulado",
+  "goal": "Executar triagem regulatoria simulada em dry-run a partir de documento enviado experimentalmente, sem usar contratos reais.",
+  "context": {
+    "source": "streamlit_experimental_ui",
+    "source_file": "fa6f00e4e2d446459c8a073133b47773_contrato_tela_teste.txt",
+    "constraints": [
+      "dry-run only",
+      "sem dados reais",
+      "sem contratos reais",
+      "sem parecer juridico final",
+      "sem aprovacao ou reprovacao automatica",
+      "sem OCR nesta etapa"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "upload-b296ffb5",
+      "title": "Triagem experimental de documento enviado",
+      "description": "Minuta contratual simulada. O contrato menciona tratamento de dados pessoais, mas nao informa confidencialidade, retencao, descarte, finalidade de tratamento, matriz de responsabilidades ou incidente de seguranca.",
+      "priority": "medium",
+      "sector": "juridico_compliance",
+      "requester_type": "upload_experimental",
+      "submitted_documents": [
+        "fa6f00e4e2d446459c8a073133b47773_contrato_tela_teste.txt"
+      ],
+      "document_type": "documento_enviado_simulado",
+      "personal_data": [],
+      "sensitive_data": [],
+      "urgency": "medium",
+      "declared_purpose": "Triagem experimental de documento simulado enviado pela interface web.",
+      "contract_clauses": [
+        "confidencialidade",
+        "retencao",
+        "descarte",
+        "finalidade",
+        "responsabilidades",
+        "incidente"
+      ],
+      "missing_clauses": [],
+      "missing_documents": [],
+      "confidence_hint": 0.84
+    }
+  ]
+}

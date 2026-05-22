@@ -31,7 +31,13 @@ def test_build_report_includes_summary_decisions_actions_and_safety():
         )
     ]
 
-    report = build_report("run-001", mission_input, decisions, actions)
+    report = build_report(
+        "run-001",
+        mission_input,
+        decisions,
+        actions,
+        audit_log_path="runs/run-001/audit_log.jsonl",
+    )
 
     assert "# Relatorio dry-run: run-001" in report
     assert "Tema: report-theme" in report
@@ -43,5 +49,6 @@ def test_build_report_includes_summary_decisions_actions_and_safety():
     assert "Matriz de criterios aplicada" in report
     assert "Guardrails aplicados" in report
     assert "Trilha de auditoria" in report
+    assert "audit_log.jsonl" in report
     assert "Revisao humana" in report
     assert "dry-run" in report
