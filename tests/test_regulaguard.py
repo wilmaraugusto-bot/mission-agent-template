@@ -104,8 +104,12 @@ def test_report_contains_auditability_information():
 
     report = build_report("run-regulaguard", mission_input, decisions, actions)
 
+    assert "Resumo executivo" in report
+    assert "Matriz de criterios aplicada" in report
+    assert "Guardrails aplicados" in report
     assert "Trilha de auditoria" in report
-    assert "Masked data" in report
-    assert "Human review required: True" in report
+    assert "Dados mascarados" in report
+    assert "Revisao humana necessaria: sim" in report
     assert "retencao_descarte" in report
-    assert "no final legal opinion" in report
+    assert "nao e decisao juridica" in report
+    assert "dry-run" in report

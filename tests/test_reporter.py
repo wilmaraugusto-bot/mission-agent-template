@@ -33,10 +33,15 @@ def test_build_report_includes_summary_decisions_actions_and_safety():
 
     report = build_report("run-001", mission_input, decisions, actions)
 
-    assert "# Dry-run Report: run-001" in report
-    assert "Theme: report-theme" in report
-    assert "- Decisions generated: 1" in report
-    assert "- Actions allowed: 1" in report
+    assert "# Relatorio dry-run: run-001" in report
+    assert "Tema: report-theme" in report
+    assert "- Decisoes geradas: 1" in report
+    assert "- Acoes permitidas: 1" in report
     assert "decision-001" in report
     assert "action-001" in report
-    assert "Dry-run mode did not execute external changes." in report
+    assert "Resumo executivo" in report
+    assert "Matriz de criterios aplicada" in report
+    assert "Guardrails aplicados" in report
+    assert "Trilha de auditoria" in report
+    assert "Revisao humana" in report
+    assert "dry-run" in report

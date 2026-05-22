@@ -51,4 +51,4 @@ def test_agent_flow_creates_expected_artifacts(tmp_path):
     assert decisions[0]["task_id"] == "task-001"
     assert actions[0]["dry_run"] is True
     assert actions[0]["safety_status"] == "allowed"
-    assert "Dry-run mode did not execute external changes." in report
+    assert "Modo dry-run nao executou alteracoes externas." in report
