@@ -101,3 +101,28 @@ Limites adicionais:
 - Gemini usa apenas `GEMINI_API_KEY` do ambiente e faz fallback para `mock`;
 - nao ha banco de dados;
 - nao ha autenticacao.
+
+## Testes manuais realizados
+
+A branch experimental `post-challenge-ui-docs` foi validada manualmente com os
+seguintes cenarios:
+
+- upload de arquivo `.txt` simulado;
+- upload de PDF digital com texto selecionavel;
+- upload de imagem para OCR experimental;
+- geracao de relatorio na tela;
+- download de `report.md`, `decisions.json` e `actions.json`;
+- execucao preservada do fluxo CLI original com `data/sample_input.json`.
+
+Limitacoes conhecidas:
+
+- OCR e experimental;
+- a qualidade do OCR depende da nitidez, contraste, orientacao e resolucao da
+  imagem;
+- documentos reais nao devem ser usados;
+- contratos reais nao devem ser usados;
+- dados pessoais reais nao devem ser enviados;
+- o agente nao emite parecer juridico final;
+- o agente nao aprova nem reprova contratos;
+- todas as acoes continuam em `dry-run`;
+- a versao oficial entregue no desafio continua na branch `main`.
