@@ -116,12 +116,60 @@ automaticamente para `mock`.
 - Manter o projeto simples e executavel via Docker.
 - Evitar que a solucao pareca chatbot em vez de um fluxo controlado end-to-end.
 
-## Melhorias futuras
+## Melhorias futuras e caminho de refatoração para produção
 
-- Matriz de risco configuravel por setor regulado.
-- Biblioteca de clausulas ficticias para testes mais amplos.
-- Revisao humana simulada com feedback estruturado.
-- Exportacao de trilha de auditoria para sistemas internos.
+Para evoluir esta prova de conceito para um uso produtivo, seriam necessarios:
+
+- matriz de risco configuravel por setor regulado, aprovada por juridico, compliance e DPO;
+- biblioteca de clausulas ficticias para testes mais amplos, sem usar contratos proprietarios;
+- revisao humana simulada com feedback estruturado;
+- exportacao de trilha de auditoria para sistemas internos;
+- conectores seguros e autorizados para fontes reais;
+- armazenamento persistente dos logs de auditoria;
+- politica de retencao e descarte;
+- criptografia de dados sensiveis em repouso e em transito;
+- monitoramento de taxa de fallback, baixa confianca e revisao humana;
+- validacao formal dos prompts, criterios e guardrails por areas responsaveis.
+
+## Como demonstrar o funcionamento
+
+A entrada analisada esta em `data/sample_input.json`. Esse arquivo contem casos
+simulados de solicitacoes regulatorias e minutas contratuais ficticias. O projeto
+nao usa dados reais nem contratos reais.
+
+Ao rodar:
+
+```bash
+docker compose up --build
+```
+
+o agente le esse JSON, executa a triagem em modo `dry-run` e gera o resultado em:
+
+```text
+runs/<timestamp>/
+```
+
+Os principais arquivos gerados sao:
+
+- `decisions.json`: decisoes estruturadas do agente;
+- `actions.json`: acoes simuladas em `dry-run`;
+- `report.md`: relatorio legivel para revisao humana.
+
+O avaliador pode abrir o `report.md` mais recente para ver a analise. Exemplos
+incluidos na entrada simulada:
+
+- `case-002`: minuta contratual simulada sem clausula de confidencialidade;
+- `case-003`: minuta simulada sem retencao/descarte;
+- `case-005`: caso critico com dado sensivel simulado;
+- `case-006`: caso de baixa confianca encaminhado para revisao humana.
+
+Limites da demonstracao:
+
+- o agente nao aprova nem reprova contratos;
+- o agente nao emite parecer juridico final;
+- todas as acoes sao `dry-run`;
+- Gemini e opcional;
+- `mock` e o padrao para rodar first try.
 
 ## Caso de teste obrigatorio
 
