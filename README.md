@@ -1,13 +1,14 @@
 # RegulaGuard Agent
 
-Agente autonomo de triagem regulatoria, LGPD e riscos contratuais simulados para
-o Dia 2 da Missao IA + Open Challenge Dev.
+Solucao de IA baseada em agente controlado para triagem regulatoria, LGPD e
+riscos contratuais simulados no Dia 2 da Missao IA + Open Challenge Dev.
 
 ## Descricao
 
 O RegulaGuard Agent apoia processos criticos em setores regulados, com foco em
-triagem juridica/administrativa e analise de minutas contratuais simuladas de
-onboarding. O projeto nao usa dados reais, nao usa contratos reais e nao emite
+triagem regulatoria, juridica, compliance e analise de riscos contratuais
+simulados em minutas ficticias de onboarding. O projeto nao usa dados reais,
+nao usa contratos reais, nao aprova contrato, nao reprova contrato e nao emite
 parecer juridico final.
 
 ## O desafio
@@ -18,9 +19,18 @@ O desafio pede uma solucao de IA capaz de melhorar consistencia, precisao,
 protecao de dados sensiveis, auditabilidade e apoio a decisao em contextos como
 Juridico, Saude ou Financas.
 
+Os cinco pilares considerados nesta implementacao sao:
+
+- conformidade regulatoria;
+- auditabilidade e explicabilidade;
+- protecao de dados sensiveis;
+- human-in-the-loop;
+- robustez.
+
 ## A solucao
 
-O agente executa um fluxo end-to-end:
+O RegulaGuard automatiza a triagem inicial e apoia a tomada de decisao, mas
+preserva revisao humana nos pontos criticos. Ele executa um fluxo end-to-end:
 
 - coleta dados simulados em `data/sample_input.json`;
 - analisa contexto regulatorio, LGPD e riscos contratuais simulados;
@@ -40,11 +50,11 @@ roteamento para revisao humana, registro de auditoria e relatorio.
 - Pydantic para validar entradas, decisoes, acoes e artefatos.
 - Provider `mock` como padrao para funcionar sem internet e sem API paga.
 - Gemini/OpenAI apenas opcionais via `.env`, com fallback seguro para `mock`.
-- Sem frontend e sem banco de dados para manter a entrega reproduzivel.
+- Sem frontend e sem banco de dados para manter a entrega reproduzivel e robusta.
 
 ## Conformidade regulatoria
 
-O RegulaGuard faz triagem inicial e nao substitui profissionais juridicos,
+O RegulaGuard faz triagem inicial controlada e nao substitui profissionais juridicos,
 compliance, DPO ou areas reguladas. Casos de alto risco, risco critico, baixa
 confianca, dados sensiveis ou clausulas criticas ausentes sao encaminhados para
 human-in-the-loop.
@@ -104,7 +114,7 @@ automaticamente para `mock`.
 - Equilibrar autonomia com limites eticos e juridicos.
 - Representar riscos de LGPD sem usar dados reais.
 - Manter o projeto simples e executavel via Docker.
-- Evitar que o agente pareca chatbot em vez de fluxo autonomo.
+- Evitar que a solucao pareca chatbot em vez de um fluxo controlado end-to-end.
 
 ## Melhorias futuras
 
@@ -134,6 +144,8 @@ decisoes, executou acoes em `dry-run` e registrou trilha auditavel.
 
 ## Tutorial de como testar
 
+O caminho principal e validado e Docker.
+
 1. Confira que `.env` existe e mantem `LLM_PROVIDER=mock`.
 2. Rode:
 
@@ -156,6 +168,9 @@ docker compose run --rm agent python scripts/acceptance_check.py
 5. Abra o relatorio mais recente em `runs/<timestamp>/report.md`.
 
 ## Execucao local opcional
+
+Esta execucao e opcional. Em Windows ou ambientes sem Python configurado, use o
+caminho validado com Docker descrito acima.
 
 ```bash
 python -m venv .venv
