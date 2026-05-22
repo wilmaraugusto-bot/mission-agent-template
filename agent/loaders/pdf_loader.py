@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from agent.loaders.ocr_loader import load_pdf_ocr
+
 
 def load_pdf(path: Path) -> tuple[str, list[str]]:
     warnings: list[str] = []
@@ -37,7 +39,12 @@ def load_pdf(path: Path) -> tuple[str, list[str]]:
         extracted_text = _extract_uncompressed_literal_text(path)
 
     if not extracted_text.strip():
-        warnings.append("PDF sem texto selecionavel extraivel; OCR ainda nao e suportado.")
+        ocr_text, ocr_warnings = load_pdf_ocr(path)
+        extracted_text = ocr_text
+        warnings.extend(ocr_warnings)
+
+    if not extracted_text.strip() and not warnings:
+        warnings.append("PDF sem texto selecionavel extraivel.")
 
     return extracted_text, warnings
 

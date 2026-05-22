@@ -52,7 +52,7 @@ Retorno esperado:
 - O conteudo extraido nao deve ser salvo em logs.
 - Todas as acoes do agente continuam em `dry-run`.
 
-## Etapa 2 - Tela Streamlit experimental
+## Etapa 2 - Tela Streamlit experimental e OCR
 
 A branch tambem inclui uma tela experimental em `ui/app.py`. Ela nao substitui o
 fluxo CLI e nao e iniciada por padrao com `docker compose up --build`.
@@ -71,14 +71,27 @@ http://localhost:8501
 
 Recursos da tela:
 
-- upload de `.txt`, `.pdf` digital com texto selecionavel e `.docx`;
+- visual em tema escuro corporativo proprio, sem copiar logos, fontes, imagens
+  ou identidade visual de terceiros;
+- upload de `.txt`, `.pdf`, `.docx`, `.png`, `.jpg` e `.jpeg`;
 - uso de `agent.loaders.document_loader.load_document`;
 - exibicao de nome, tipo, avisos e previa limitada do texto extraido;
 - geracao de input temporario compativel com o agente;
 - botao **Analisar documento** para executar o fluxo em `dry-run`;
+- abas para Entrada, Texto extraido, Analise e Artefatos;
+- cards de resumo com risco, revisao humana, documentos, clausulas e acoes;
 - exibicao do `report.md`;
 - downloads de `report.md`, `decisions.json` e `actions.json`;
 - selecao de provider `mock` ou `gemini`, com `mock` como padrao.
+
+OCR experimental:
+
+- imagens `.png`, `.jpg` e `.jpeg` usam `pytesseract` + Pillow;
+- PDFs continuam tentando extracao textual normal primeiro;
+- se o PDF nao tiver texto extraivel, o loader tenta OCR com `pdf2image`,
+  `pytesseract` e `poppler-utils`;
+- se OCR nao estiver disponivel ou nao extrair texto, o loader retorna warning
+  claro e nao quebra o fluxo.
 
 Limites adicionais:
 
@@ -86,7 +99,5 @@ Limites adicionais:
 - nao envie dados pessoais reais;
 - a interface nao pede nem salva chave de API;
 - Gemini usa apenas `GEMINI_API_KEY` do ambiente e faz fallback para `mock`;
-- nao ha OCR;
-- nao ha upload de imagem;
 - nao ha banco de dados;
 - nao ha autenticacao.

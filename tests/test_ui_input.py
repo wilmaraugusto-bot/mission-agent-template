@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ui.app import build_temporary_mission_input
+from ui.app import _safe_upload_name, build_temporary_mission_input
 
 
 def test_build_temporary_mission_input_infers_missing_clauses():
@@ -34,3 +34,12 @@ def test_build_temporary_mission_input_truncates_description():
 
     assert len(description) <= 1203
     assert description.endswith("...")
+
+
+def test_safe_upload_name_prevents_path_traversal():
+    safe_name = _safe_upload_name("../../contrato real.pdf")
+
+    assert "/" not in safe_name
+    assert "\\" not in safe_name
+    assert safe_name.endswith(".pdf")
+    assert "contrato_real" in safe_name

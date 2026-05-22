@@ -114,3 +114,16 @@ startxref
 
     assert result["file_type"] == "pdf"
     assert "Minuta simulada em PDF digital" in result["extracted_text"]
+
+
+def test_load_document_blank_png_uses_ocr_with_warning(tmp_path):
+    from PIL import Image
+
+    path = tmp_path / "imagem.png"
+    Image.new("RGB", (120, 60), "white").save(path)
+
+    result = load_document(str(path))
+
+    assert result["file_type"] == "png"
+    assert result["extracted_text"].strip() == ""
+    assert result["warnings"]

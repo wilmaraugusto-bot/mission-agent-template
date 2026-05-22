@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from agent.loaders.docx_loader import load_docx
+from agent.loaders.ocr_loader import load_image_ocr
 from agent.loaders.pdf_loader import load_pdf
 from agent.loaders.txt_loader import load_txt
 
@@ -12,6 +13,9 @@ SUPPORTED_LOADERS = {
     ".txt": load_txt,
     ".pdf": load_pdf,
     ".docx": load_docx,
+    ".png": load_image_ocr,
+    ".jpg": load_image_ocr,
+    ".jpeg": load_image_ocr,
 }
 
 
@@ -35,7 +39,7 @@ def load_document(path: str) -> dict[str, Any]:
     loader = SUPPORTED_LOADERS.get(suffix)
     if loader is None:
         result["warnings"].append(
-            f"Extensao '{suffix or 'sem extensao'}' nao suportada. Use .txt, .pdf ou .docx."
+            f"Extensao '{suffix or 'sem extensao'}' nao suportada. Use .txt, .pdf, .docx, .png, .jpg ou .jpeg."
         )
         return result
 
