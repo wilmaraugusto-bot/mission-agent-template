@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import json
+from urllib.error import HTTPError
+from io import BytesIO
 
 from agent.config import Settings, load_settings
 from agent.llm.base import LLMProviderError
@@ -21,11 +23,21 @@ def _mission_input() -> MissionInput:
 def test_load_settings_defaults_to_mock_provider(monkeypatch):
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     monkeypatch.delenv("LLM_FALLBACK_PROVIDER", raising=False)
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
 
     settings = load_settings()
 
     assert settings.llm_provider == "mock"
     assert settings.llm_fallback_provider == "mock"
+    assert settings.gemini_model == "gemini-3.5-flash"
+
+
+def test_load_settings_reads_gemini_model(monkeypatch):
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
+
+    settings = load_settings()
+
+    assert settings.gemini_model == "gemini-test-model"
 
 
 def test_router_uses_mock_by_default():
@@ -112,20 +124,24 @@ def test_gemini_provider_parses_valid_response(monkeypatch):
 
     def fake_urlopen(request, timeout):
         assert timeout == 20
+        assert "models/gemini-test-model:generateContent" in request.full_url
         assert request.headers["X-goog-api-key"] == "test-key"
         return FakeResponse()
 
     monkeypatch.setattr("agent.llm.gemini_provider.urlopen", fake_urlopen)
 
-    decisions = GeminiLLMProvider(api_key="test-key").validated_decisions(_mission_input())
+    decisions = GeminiLLMProvider(
+        api_key="test-key",
+        model="gemini-test-model",
+    ).validated_decisions(_mission_input())
 
     assert decisions[0].summary == "Gemini decision"
     assert decisions[0].confidence == 0.81
 
 
-def test_router_does_not_log_gemini_key_when_gemini_request_fails(caplog, monkeypatch):
+def test_router_logs_sanitized_gemini_error_without_key(caplog, monkeypatch):
     def fake_urlopen(request, timeout):
-        raise OSError("network unavailable")
+        raise OSError("network unavailable for test-key")
 
     monkeypatch.setattr("agent.llm.gemini_provider.urlopen", fake_urlopen)
     settings = Settings(llm_provider="gemini", gemini_api_key="test-key")
@@ -135,4 +151,69 @@ def test_router_does_not_log_gemini_key_when_gemini_request_fails(caplog, monkey
 
     assert "RegulaGuard triage for task-001" in decisions[0].summary
     assert "falling back to 'mock'" in caplog.text
+    assert "Gemini transport error" in caplog.text
+    assert "[REDACTED]" in caplog.text
     assert "test-key" not in caplog.text
+
+
+def test_gemini_http_error_message_includes_status_and_sanitized_body(monkeypatch):
+    class FakeErrorBody(BytesIO):
+        def close(self):
+            pass
+
+    def fake_urlopen(request, timeout):
+        raise HTTPError(
+            request.full_url,
+            404,
+            "Not Found",
+            hdrs=None,
+            fp=FakeErrorBody(b'{"error":"model not found for test-key"}'),
+        )
+
+    monkeypatch.setattr("agent.llm.gemini_provider.urlopen", fake_urlopen)
+
+    try:
+        GeminiLLMProvider(api_key="test-key").decide(_mission_input())
+    except LLMProviderError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected LLMProviderError")
+
+    assert "status=404" in message
+    assert "model not found" in message
+    assert "[REDACTED]" in message
+    assert "test-key" not in message
+
+
+def test_gemini_invalid_schema_error_is_diagnostic(monkeypatch):
+    class FakeResponse:
+        def read(self):
+            payload = {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": json.dumps({"not": "a list"})
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+            return json.dumps(payload).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    monkeypatch.setattr("agent.llm.gemini_provider.urlopen", lambda request, timeout: FakeResponse())
+
+    try:
+        GeminiLLMProvider(api_key="test-key").decide(_mission_input())
+    except LLMProviderError as exc:
+        assert "schema is invalid" in str(exc)
+    else:
+        raise AssertionError("Expected LLMProviderError")

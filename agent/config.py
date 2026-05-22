@@ -11,6 +11,7 @@ class Settings(BaseModel):
     llm_provider: str = Field(default="mock")
     llm_fallback_provider: str = Field(default="mock")
     gemini_api_key: str = Field(default="")
+    gemini_model: str = Field(default="gemini-3.5-flash")
     openai_api_key: str = Field(default="")
     dry_run: bool = Field(default=True)
     input_path: Path = Field(default=Path("data/sample_input.json"))
@@ -31,6 +32,7 @@ def load_settings() -> Settings:
         llm_provider=os.getenv("LLM_PROVIDER", "mock"),
         llm_fallback_provider=os.getenv("LLM_FALLBACK_PROVIDER", "mock"),
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         dry_run=_get_bool("DRY_RUN", True),
         input_path=Path(os.getenv("INPUT_PATH", "data/sample_input.json")),

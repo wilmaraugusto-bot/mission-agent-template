@@ -187,6 +187,7 @@ Veja `.env.example`. A configuracao padrao usa:
 LLM_PROVIDER=mock
 LLM_FALLBACK_PROVIDER=mock
 GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash
 OPENAI_API_KEY=
 DRY_RUN=true
 ```
@@ -196,11 +197,14 @@ Providers opcionais:
 ```text
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=sua_chave_local
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
 Com `LLM_PROVIDER=gemini`, o agente faz uma chamada real opcional ao Gemini para
-gerar as decisoes. Se `GEMINI_API_KEY` estiver vazia ou a chamada falhar, o fluxo
-usa `mock` automaticamente. Nao coloque chaves reais no repositorio.
+gerar as decisoes. Se `GEMINI_API_KEY` estiver vazia, se o modelo configurado em
+`GEMINI_MODEL` nao estiver disponivel, ou se a chamada falhar por rede/API, o
+fluxo usa `mock` automaticamente. Esse fallback e esperado e seguro. Nao coloque
+chaves reais no repositorio.
 
 ```text
 LLM_PROVIDER=openai

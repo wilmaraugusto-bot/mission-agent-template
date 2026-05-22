@@ -15,7 +15,7 @@ class GeminiLLMProvider(BaseLLMProvider):
     def __init__(
         self,
         api_key: str,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3.5-flash",
         timeout_seconds: int = 20,
     ) -> None:
         self._api_key = api_key
@@ -47,8 +47,18 @@ class GeminiLLMProvider(BaseLLMProvider):
         try:
             with urlopen(request, timeout=self._timeout_seconds) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
-            raise LLMProviderError("Gemini request failed.") from exc
+        except HTTPError as exc:
+            raise LLMProviderError(self._http_error_message(exc)) from exc
+        except URLError as exc:
+            reason = self._safe_text(getattr(exc, "reason", exc))
+            raise LLMProviderError(f"Gemini network error ({exc.__class__.__name__}): {reason}") from exc
+        except TimeoutError as exc:
+            raise LLMProviderError("Gemini request timed out.") from exc
+        except json.JSONDecodeError as exc:
+            raise LLMProviderError("Gemini returned invalid JSON in the HTTP response body.") from exc
+        except OSError as exc:
+            reason = self._safe_text(exc)
+            raise LLMProviderError(f"Gemini transport error ({exc.__class__.__name__}): {reason}") from exc
 
         text = self._extract_text(response_payload)
         return self._parse_decisions(text)
@@ -74,7 +84,9 @@ class GeminiLLMProvider(BaseLLMProvider):
         try:
             return payload["candidates"][0]["content"]["parts"][0]["text"]
         except (KeyError, IndexError, TypeError) as exc:
-            raise LLMProviderError("Gemini response did not include text content.") from exc
+            raise LLMProviderError(
+                "Gemini response had an unexpected format: missing candidates[0].content.parts[0].text."
+            ) from exc
 
     def _parse_decisions(self, text: str) -> list[dict[str, Any]]:
         cleaned = text.strip()
@@ -85,9 +97,28 @@ class GeminiLLMProvider(BaseLLMProvider):
         try:
             decisions = json.loads(cleaned)
         except json.JSONDecodeError as exc:
-            raise LLMProviderError("Gemini response was not valid JSON.") from exc
+            raise LLMProviderError("Gemini response text was not valid JSON.") from exc
 
         if not isinstance(decisions, list):
-            raise LLMProviderError("Gemini response JSON must be a list.")
+            raise LLMProviderError("Gemini response schema is invalid: expected a JSON list of decisions.")
 
         return decisions
+
+    def _http_error_message(self, exc: HTTPError) -> str:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except OSError:
+            body = ""
+        body = self._safe_text(body)
+        if len(body) > 500:
+            body = f"{body[:500]}..."
+        if body:
+            return f"Gemini HTTP error status={exc.code}: {body}"
+        return f"Gemini HTTP error status={exc.code}."
+
+    def _safe_text(self, value: Any) -> str:
+        text = str(value)
+        if self._api_key:
+            text = text.replace(self._api_key, "[REDACTED]")
+        return text.replace("\n", " ").strip()
