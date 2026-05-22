@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import io
 import json
+import logging
 import re
 import uuid
 import unicodedata
+from html import escape
 from pathlib import Path
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from agent.config import load_settings
 from agent.core.runner import AgentRunner
@@ -23,6 +27,14 @@ ESSENTIAL_TERMS = [
     "responsabilidades",
     "incidente",
 ]
+ARTIFACT_FILES = ["report.md", "decisions.json", "actions.json"]
+SUPPORTED_UPLOAD_TYPES = ["txt", "pdf", "docx", "png", "jpg", "jpeg"]
+RISK_LABELS = {
+    "baixo": "BAIXO",
+    "medio": "MEDIO",
+    "alto": "ALTO",
+    "critico": "CRITICO",
+}
 
 
 def apply_custom_css() -> None:
@@ -72,9 +84,15 @@ def apply_custom_css() -> None:
         }
         .rg-card-value {
             color: #f8fafc;
-            font-size: 1.2rem;
+            font-size: 1.35rem;
             font-weight: 700;
             line-height: 1.25;
+        }
+        .rg-card-hint {
+            margin-top: 0.35rem;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            line-height: 1.35;
         }
         .rg-badge {
             display: inline-flex;
@@ -89,6 +107,12 @@ def apply_custom_css() -> None:
         .risk-medio { background: rgba(59, 130, 246, 0.20); color: #93c5fd; }
         .risk-alto { background: rgba(245, 158, 11, 0.20); color: #fcd34d; }
         .risk-critico { background: rgba(244, 63, 94, 0.22); color: #fda4af; }
+        .rg-pill-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin: 0.7rem 0 1rem 0;
+        }
         .rg-hero {
             padding: 1rem 1.1rem;
             border: 1px solid rgba(168, 85, 247, 0.28);
@@ -174,6 +198,45 @@ def _safe_upload_name(filename: str) -> str:
     return f"{uuid.uuid4().hex}_{safe_stem}{suffix}"
 
 
+def _friendly_loader_messages(result: dict[str, Any]) -> list[str]:
+    warnings = list(result.get("warnings", []))
+    extracted_text = result.get("extracted_text", "")
+    file_type = result.get("file_type", "")
+    messages: list[str] = []
+
+    for warning in warnings:
+        normalized = _normalize_text(warning)
+        if "nao suportada" in normalized:
+            messages.append(
+                "Formato nao suportado para a tela experimental. Use .txt, .pdf, .docx, .png, .jpg ou .jpeg."
+            )
+        elif "ocr executado" in normalized and "nenhum texto" in normalized:
+            messages.append(
+                "OCR executado, mas sem resultado legivel. Tente uma imagem mais nitida, com melhor contraste ou orientacao."
+            )
+        elif "ocr nao esta disponivel" in normalized:
+            messages.append(
+                "OCR nao esta disponivel no ambiente atual. Verifique as dependencias do container."
+            )
+        elif "pdf" in normalized and ("poppler" in normalized or "ocr" in normalized):
+            messages.append(
+                "PDF escaneado pode depender das bibliotecas de OCR instaladas no container."
+            )
+        else:
+            messages.append(warning)
+
+    if not str(extracted_text).strip() and not messages:
+        messages.append(
+            "Arquivo sem texto extraido. A analise sera limitada e deve ser encaminhada para revisao humana."
+        )
+    elif not str(extracted_text).strip() and file_type in {"png", "jpg", "jpeg", "pdf"}:
+        messages.append(
+            "Nenhum texto foi extraido do arquivo. Se for imagem ou PDF escaneado, o OCR pode nao ter conseguido ler o conteudo."
+        )
+
+    return list(dict.fromkeys(messages))
+
+
 def _write_temporary_input(payload: dict[str, Any]) -> Path:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     path = UPLOADS_DIR / f"mission_input_{uuid.uuid4().hex}.json"
@@ -182,15 +245,19 @@ def _write_temporary_input(payload: dict[str, Any]) -> Path:
 
 
 def _risk_badge(risk: str) -> str:
-    risk_value = risk or "baixo"
-    return f'<span class="rg-badge risk-{risk_value}">{risk_value.upper()}</span>'
+    risk_value = (risk or "baixo").lower()
+    if risk_value not in RISK_LABELS:
+        risk_value = "medio"
+    return f'<span class="rg-badge risk-{risk_value}">{RISK_LABELS[risk_value]}</span>'
 
 
-def _card(label: str, value: str) -> str:
+def _card(label: str, value: str, hint: str = "") -> str:
+    hint_html = f'<div class="rg-card-hint">{escape(hint)}</div>' if hint else ""
     return (
         '<div class="rg-card">'
-        f'<div class="rg-card-label">{label}</div>'
+        f'<div class="rg-card-label">{escape(label)}</div>'
         f'<div class="rg-card-value">{value}</div>'
+        f"{hint_html}"
         "</div>"
     )
 
@@ -201,12 +268,17 @@ def _analysis_summary(run_dir: Path) -> dict[str, Any]:
     first_decision = decisions[0] if decisions else {}
     missing_documents = first_decision.get("missing_documents", [])
     missing_clauses = first_decision.get("missing_contract_clauses", [])
+    human_review = bool(first_decision.get("requires_human_review", False))
     return {
         "risk": first_decision.get("regulatory_risk", "baixo"),
-        "human_review": "sim" if first_decision.get("requires_human_review", False) else "nao",
-        "missing_documents": ", ".join(missing_documents) if missing_documents else "nenhum",
-        "missing_clauses": ", ".join(missing_clauses) if missing_clauses else "nenhuma",
-        "dry_run_actions": str(len(actions)),
+        "human_review": "SIM" if human_review else "NAO",
+        "human_review_hint": "encaminhamento sugerido" if human_review else "sem encaminhamento automatico",
+        "missing_documents_count": len(missing_documents),
+        "missing_documents_hint": ", ".join(missing_documents[:3]) if missing_documents else "nenhum documento pendente",
+        "missing_clauses_count": len(missing_clauses),
+        "missing_clauses_hint": ", ".join(missing_clauses[:3]) if missing_clauses else "nenhuma clausula pendente",
+        "dry_run_actions_count": len(actions),
+        "dry_run_actions_hint": "acoes simuladas, sem execucao externa",
     }
 
 
@@ -216,10 +288,83 @@ def _render_summary_cards(run_dir: Path) -> None:
     summary = _analysis_summary(run_dir)
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.markdown(_card("Risco regulatorio", _risk_badge(summary["risk"])), unsafe_allow_html=True)
-    col2.markdown(_card("Revisao humana", summary["human_review"]), unsafe_allow_html=True)
-    col3.markdown(_card("Documentos ausentes", summary["missing_documents"]), unsafe_allow_html=True)
-    col4.markdown(_card("Clausulas ausentes", summary["missing_clauses"]), unsafe_allow_html=True)
-    col5.markdown(_card("Acoes em dry-run", summary["dry_run_actions"]), unsafe_allow_html=True)
+    col2.markdown(
+        _card("Revisao humana", summary["human_review"], summary["human_review_hint"]),
+        unsafe_allow_html=True,
+    )
+    col3.markdown(
+        _card(
+            "Documentos ausentes",
+            str(summary["missing_documents_count"]),
+            summary["missing_documents_hint"],
+        ),
+        unsafe_allow_html=True,
+    )
+    col4.markdown(
+        _card(
+            "Clausulas ausentes",
+            str(summary["missing_clauses_count"]),
+            summary["missing_clauses_hint"],
+        ),
+        unsafe_allow_html=True,
+    )
+    col5.markdown(
+        _card(
+            "Acoes em dry-run",
+            str(summary["dry_run_actions_count"]),
+            summary["dry_run_actions_hint"],
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="rg-pill-row">'
+        f'{_risk_badge("baixo")}{_risk_badge("medio")}{_risk_badge("alto")}{_risk_badge("critico")}'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def create_analysis_zip(run_dir: Path) -> bytes:
+    buffer = io.BytesIO()
+    with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as zip_file:
+        for file_name in ARTIFACT_FILES:
+            artifact_path = run_dir / file_name
+            if artifact_path.exists() and artifact_path.is_file():
+                zip_file.write(artifact_path, arcname=file_name)
+    return buffer.getvalue()
+
+
+def _run_agent_with_provider_warnings(settings: Any) -> tuple[Path, list[str]]:
+    messages: list[str] = []
+
+    class _StreamlitWarningHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            message = record.getMessage()
+            if "falling back" in message or "fallback" in message:
+                messages.append(message)
+
+    logger = logging.getLogger("agent.llm.router")
+    handler = _StreamlitWarningHandler(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        run_dir = AgentRunner(settings).run()
+    finally:
+        logger.removeHandler(handler)
+    return run_dir, list(dict.fromkeys(messages))
+
+
+def _render_interpretation_section() -> None:
+    import streamlit as st
+
+    st.subheader("Como interpretar o resultado")
+    st.markdown(
+        """
+        - `decisions.json` contem decisoes estruturadas do agente.
+        - `actions.json` contem acoes simuladas em `dry-run`, sem execucao externa.
+        - `report.md` contem o relatorio legivel para revisao humana.
+        - Revisao humana significa encaminhamento sugerido, nao aprovacao, reprovacao ou execucao real.
+        """
+    )
 
 
 def main() -> None:
@@ -246,6 +391,8 @@ def main() -> None:
         st.session_state.mission_input = None
     if "run_dir" not in st.session_state:
         st.session_state.run_dir = None
+    if "provider_warnings" not in st.session_state:
+        st.session_state.provider_warnings = []
 
     tab_input, tab_text, tab_analysis, tab_artifacts = st.tabs(
         ["Entrada", "Texto extraido", "Analise", "Artefatos"]
@@ -255,9 +402,14 @@ def main() -> None:
         provider = st.selectbox("Provider", ["mock", "gemini"], index=0)
         uploaded_file = st.file_uploader(
             "Envie um documento simulado",
-            type=["txt", "pdf", "docx", "png", "jpg", "jpeg"],
+            type=SUPPORTED_UPLOAD_TYPES,
         )
         st.caption("OCR experimental esta disponivel para imagens e PDFs sem texto selecionavel.")
+        if provider == "gemini":
+            st.info(
+                "Gemini e opcional. A chave e lida apenas do ambiente; se a chamada falhar, "
+                "o roteador faz fallback para mock."
+            )
 
         if uploaded_file is not None:
             UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -273,7 +425,13 @@ def main() -> None:
             st.session_state.document_result = result
             st.session_state.mission_input = mission_input
             st.session_state.provider = provider
-            st.success("Documento carregado para triagem experimental.")
+            if result.get("extracted_text", "").strip():
+                st.success("Documento carregado para triagem experimental.")
+            else:
+                st.warning(
+                    "Documento carregado, mas sem texto extraido. A analise ficara limitada "
+                    "e deve ser tratada como caso de revisao humana."
+                )
         else:
             st.info("Envie um arquivo .txt, .pdf, .docx, .png, .jpg ou .jpeg para iniciar.")
 
@@ -286,7 +444,7 @@ def main() -> None:
             st.write(f"**Arquivo:** {Path(result['source_file']).name}")
             st.write(f"**Tipo:** {result['file_type']}")
 
-            warnings = result.get("warnings", [])
+            warnings = _friendly_loader_messages(result)
             if warnings:
                 for warning in warnings:
                     st.warning(warning)
@@ -313,15 +471,21 @@ def main() -> None:
                     "dry_run": True,
                 }
             )
-            run_dir = AgentRunner(settings).run()
+            run_dir, provider_warnings = _run_agent_with_provider_warnings(settings)
             st.session_state.run_dir = run_dir
+            st.session_state.provider_warnings = provider_warnings
             st.success(f"Execucao gerada em: {run_dir}")
+            for warning in provider_warnings:
+                st.warning(f"Falha do provider com fallback seguro: {warning}")
 
         if st.session_state.run_dir is not None:
             _render_summary_cards(Path(st.session_state.run_dir))
+            for warning in st.session_state.get("provider_warnings", []):
+                st.warning(f"Falha do provider com fallback seguro: {warning}")
             report_path = Path(st.session_state.run_dir) / "report.md"
             st.subheader("Relatorio")
             st.markdown(report_path.read_text(encoding="utf-8"))
+            _render_interpretation_section()
         elif mission_input is None:
             st.info("Carregue um documento na aba Entrada antes de analisar.")
 
@@ -338,6 +502,14 @@ def main() -> None:
 
         report_content = report_path.read_text(encoding="utf-8")
         st.write(f"Execucao: `{run_dir}`")
+        _render_interpretation_section()
+
+        st.download_button(
+            "Baixar pacote da analise (.zip)",
+            create_analysis_zip(run_dir),
+            file_name=f"{run_dir.name}_analise.zip",
+            mime="application/zip",
+        )
 
         st.download_button(
             "Baixar report.md",

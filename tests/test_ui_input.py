@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from ui.app import _safe_upload_name, build_temporary_mission_input
+from zipfile import ZipFile
+
+from ui.app import _safe_upload_name, build_temporary_mission_input, create_analysis_zip
 
 
 def test_build_temporary_mission_input_infers_missing_clauses():
@@ -43,3 +45,18 @@ def test_safe_upload_name_prevents_path_traversal():
     assert "\\" not in safe_name
     assert safe_name.endswith(".pdf")
     assert "contrato_real" in safe_name
+
+
+def test_create_analysis_zip_includes_available_artifacts(tmp_path):
+    (tmp_path / "report.md").write_text("# Relatorio", encoding="utf-8")
+    (tmp_path / "decisions.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "actions.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "temporary_upload.txt").write_text("nao incluir", encoding="utf-8")
+
+    package = create_analysis_zip(tmp_path)
+    zip_path = tmp_path / "analysis.zip"
+    zip_path.write_bytes(package)
+
+    with ZipFile(zip_path) as zip_file:
+        assert sorted(zip_file.namelist()) == ["actions.json", "decisions.json", "report.md"]
+        assert zip_file.read("report.md").decode("utf-8") == "# Relatorio"
