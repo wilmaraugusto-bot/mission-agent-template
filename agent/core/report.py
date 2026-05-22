@@ -157,6 +157,7 @@ def build_report(
     mission_input: MissionInput,
     decisions: list[Decision],
     actions: list[Action],
+    audit_log_path: str | None = None,
 ) -> str:
     allowed_count = sum(1 for action in actions if action.safety_status == "allowed")
     blocked_count = sum(1 for action in actions if action.safety_status == "blocked")
@@ -256,6 +257,7 @@ def build_report(
             "- Fonte da entrada: JSON local simulado.",
             "- Validacao das decisoes: schemas Pydantic.",
             "- Modo das acoes: somente dry-run.",
+            f"- Log estruturado de auditoria: {audit_log_path or 'audit_log.jsonl'}.",
             "- Politica de seguranca: bloqueia acoes reais, pareceres finais e aprovacao/reprovacao automatica de contrato.",
             "- Human-in-the-loop: exigido para risco alto/critico, dados sensiveis, baixa confianca e clausulas criticas ausentes.",
             "",
