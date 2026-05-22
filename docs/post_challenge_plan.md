@@ -110,6 +110,8 @@ seguintes cenarios:
 - upload de arquivo `.txt` simulado;
 - upload de PDF digital com texto selecionavel;
 - upload de imagem para OCR experimental;
+- extracao de texto;
+- criacao automatica de caso temporario;
 - geracao de relatorio na tela;
 - download de `report.md`, `decisions.json` e `actions.json`;
 - execucao preservada do fluxo CLI original com `data/sample_input.json`.
@@ -119,10 +121,12 @@ Limitacoes conhecidas:
 - OCR e experimental;
 - a qualidade do OCR depende da nitidez, contraste, orientacao e resolucao da
   imagem;
+- PDF escaneado pode depender das bibliotecas instaladas no container;
 - documentos reais nao devem ser usados;
 - contratos reais nao devem ser usados;
 - dados pessoais reais nao devem ser enviados;
-- o agente nao emite parecer juridico final;
 - o agente nao aprova nem reprova contratos;
+- o agente nao emite parecer juridico final;
 - todas as acoes continuam em `dry-run`;
-- a versao oficial entregue no desafio continua na branch `main`.
+- a versao oficial do desafio continua preservada na branch `main` e na tag
+  `stable-delivery-v1`.
