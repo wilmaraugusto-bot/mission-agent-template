@@ -51,3 +51,42 @@ Retorno esperado:
 - PDFs escaneados ou sem texto selecionavel retornam warning.
 - O conteudo extraido nao deve ser salvo em logs.
 - Todas as acoes do agente continuam em `dry-run`.
+
+## Etapa 2 - Tela Streamlit experimental
+
+A branch tambem inclui uma tela experimental em `ui/app.py`. Ela nao substitui o
+fluxo CLI e nao e iniciada por padrao com `docker compose up --build`.
+
+Para rodar a tela:
+
+```bash
+docker compose up ui --build
+```
+
+Acesse:
+
+```text
+http://localhost:8501
+```
+
+Recursos da tela:
+
+- upload de `.txt`, `.pdf` digital com texto selecionavel e `.docx`;
+- uso de `agent.loaders.document_loader.load_document`;
+- exibicao de nome, tipo, avisos e previa limitada do texto extraido;
+- geracao de input temporario compativel com o agente;
+- botao **Analisar documento** para executar o fluxo em `dry-run`;
+- exibicao do `report.md`;
+- downloads de `report.md`, `decisions.json` e `actions.json`;
+- selecao de provider `mock` ou `gemini`, com `mock` como padrao.
+
+Limites adicionais:
+
+- nao envie contratos reais;
+- nao envie dados pessoais reais;
+- a interface nao pede nem salva chave de API;
+- Gemini usa apenas `GEMINI_API_KEY` do ambiente e faz fallback para `mock`;
+- nao ha OCR;
+- nao ha upload de imagem;
+- nao ha banco de dados;
+- nao ha autenticacao.

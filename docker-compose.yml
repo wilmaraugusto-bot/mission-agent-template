@@ -6,3 +6,17 @@ services:
     volumes:
       - .:/app
     command: python -m agent.main
+
+  ui:
+    build: .
+    profiles:
+      - ui
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    command: streamlit run ui/app.py --server.address=0.0.0.0 --server.port=8501
